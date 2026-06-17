@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CONFIG, generateSpaceId } from './config.js';
+import { CONFIG, generateSpaceId, getFaultTypeInfo } from './config.js';
 import { garageManager } from './GarageManager.js';
 
 class ModelBuilder {
@@ -8,6 +8,8 @@ class ModelBuilder {
         this.garageGroup = new THREE.Group();
         this.vehicleGroup = new THREE.Group();
         this.spaceMeshes = [];
+        this.faultIndicatorMeshes = {};
+        this.faultAnimations = {};
         this.scene.add(this.garageGroup);
         this.scene.add(this.vehicleGroup);
     }
@@ -372,27 +374,164 @@ class ModelBuilder {
 
     updateSpaceColor(space) {
         if (!space.mesh) return;
-        
+
         if (space.isFault) {
+            this.setSpaceFault(space);
             return;
         }
+
+        this.clearSpaceFault(space.id);
 
         const color = space.status === 'occupied' ? CONFIG.COLORS.OCCUPIED : CONFIG.COLORS.FREE;
         space.mesh.material.color.setHex(color);
         space.mesh.material.emissive.setHex(color);
     }
 
+    setSpaceFault(space) {
+        if (!space || !space.mesh) return;
+
+        const faultInfo = getFaultTypeInfo(space.faultType);
+        const faultColor = faultInfo ? new THREE.Color(faultInfo.color) : new THREE.Color(CONFIG.COLORS.FAULT);
+
+        space.mesh.material.color.copy(faultColor);
+        space.mesh.material.emissive.copy(faultColor);
+
+        this.createFaultIndicator(space, faultInfo);
+        this.startFaultAnimation(space.id, faultColor);
+    }
+
+    createFaultIndicator(space, faultInfo) {
+        this.clearFaultIndicator(space.id);
+
+        if (!space.mesh) return;
+
+        const indicatorGeometry = new THREE.BoxGeometry(
+            CONFIG.GARAGE.SPACE_WIDTH - 0.4,
+            0.05,
+            CONFIG.GARAGE.SPACE_DEPTH - 0.7
+        );
+        const faultColor = faultInfo ? new THREE.Color(faultInfo.color) : new THREE.Color(CONFIG.COLORS.FAULT);
+        const indicatorMaterial = new THREE.MeshBasicMaterial({
+            color: faultColor,
+            transparent: true,
+            opacity: 0.8
+        });
+        const indicator = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+        indicator.position.set(
+            space.position.x,
+            space.position.y + 0.15,
+            space.position.z
+        );
+        this.garageGroup.add(indicator);
+        this.faultIndicatorMeshes[space.id] = indicator;
+
+        if (faultInfo) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = faultInfo.color;
+            ctx.fillRect(0, 0, 256, 64);
+            ctx.font = 'bold 36px Arial';
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('⚠ ' + faultInfo.name, 128, 32);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const labelGeometry = new THREE.PlaneGeometry(2.5, 0.6);
+            const labelMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true
+            });
+            const faultLabel = new THREE.Mesh(labelGeometry, labelMaterial);
+            faultLabel.position.set(
+                space.position.x,
+                space.position.y + 1.5,
+                space.position.z - CONFIG.GARAGE.SPACE_DEPTH / 2 + 0.5
+            );
+            this.garageGroup.add(faultLabel);
+            this.faultIndicatorMeshes[space.id + '_label'] = faultLabel;
+        }
+    }
+
+    clearSpaceFault(spaceId) {
+        this.clearFaultIndicator(spaceId);
+        this.stopFaultAnimation(spaceId);
+
+        const space = garageManager.getSpace(spaceId);
+        if (space && space.mesh) {
+            const color = space.status === 'occupied' ? CONFIG.COLORS.OCCUPIED : CONFIG.COLORS.FREE;
+            space.mesh.material.color.setHex(color);
+            space.mesh.material.emissive.setHex(color);
+            space.mesh.material.emissiveIntensity = 0.2;
+        }
+    }
+
+    clearFaultIndicator(spaceId) {
+        if (this.faultIndicatorMeshes[spaceId]) {
+            this.garageGroup.remove(this.faultIndicatorMeshes[spaceId]);
+            delete this.faultIndicatorMeshes[spaceId];
+        }
+        if (this.faultIndicatorMeshes[spaceId + '_label']) {
+            this.garageGroup.remove(this.faultIndicatorMeshes[spaceId + '_label']);
+            delete this.faultIndicatorMeshes[spaceId + '_label'];
+        }
+    }
+
+    startFaultAnimation(spaceId, color) {
+        this.stopFaultAnimation(spaceId);
+        const space = garageManager.getSpace(spaceId);
+        if (!space || !space.mesh) return;
+
+        const startIntensity = 0.2;
+        const endIntensity = 0.8;
+        const duration = 1000;
+        let startTime = Date.now();
+
+        const animate = () => {
+            if (!space.mesh) return;
+            const elapsed = Date.now() - startTime;
+            const progress = (elapsed % duration) / duration;
+            const intensity = startIntensity + (endIntensity - startIntensity) * (0.5 + 0.5 * Math.sin(progress * Math.PI * 2));
+            space.mesh.material.emissiveIntensity = intensity;
+
+            if (this.faultIndicatorMeshes[spaceId]) {
+                this.faultIndicatorMeshes[spaceId].material.opacity = 0.4 + 0.4 * (0.5 + 0.5 * Math.sin(progress * Math.PI * 2));
+            }
+
+            this.faultAnimations[spaceId] = requestAnimationFrame(animate);
+        };
+        this.faultAnimations[spaceId] = requestAnimationFrame(animate);
+    }
+
+    stopFaultAnimation(spaceId) {
+        if (this.faultAnimations[spaceId]) {
+            cancelAnimationFrame(this.faultAnimations[spaceId]);
+            delete this.faultAnimations[spaceId];
+        }
+        const space = garageManager.getSpace(spaceId);
+        if (space && space.mesh) {
+            space.mesh.material.emissiveIntensity = 0.2;
+        }
+    }
+
     highlightSpace(spaceId) {
         const space = garageManager.getSpace(spaceId);
         if (space && space.mesh) {
+            space.isHighlighted = true;
             space.mesh.material.emissive.setHex(CONFIG.COLORS.HIGHLIGHT);
-            space.mesh.material.emissiveIntensity = 0.5;
+            space.mesh.material.emissiveIntensity = 0.6;
         }
     }
 
     unhighlightSpace(spaceId) {
         const space = garageManager.getSpace(spaceId);
-        if (space && space.mesh && !space.isFault) {
+        if (space && space.mesh) {
+            space.isHighlighted = false;
+            if (space.isFault) {
+                return;
+            }
             const color = space.status === 'occupied' ? CONFIG.COLORS.OCCUPIED : CONFIG.COLORS.FREE;
             space.mesh.material.emissive.setHex(color);
             space.mesh.material.emissiveIntensity = 0.2;

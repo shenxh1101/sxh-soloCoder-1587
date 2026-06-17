@@ -24,11 +24,49 @@
                     <span class="info-item">已占用: <strong id="occupiedSpaces">0</strong></span>
                     <span class="info-item">空闲: <strong id="freeSpaces">15</strong></span>
                     <span class="info-item">故障: <strong id="faultSpaces">0</strong></span>
+                    <span class="info-item">队列: <strong id="queueCount">0</strong></span>
                 </div>
             </div>
             <canvas id="threeCanvas"></canvas>
             <div class="instruction">
                 <span>💡 点击绿色空车位可存车 | 鼠标拖拽旋转 | 滚轮缩放</span>
+            </div>
+            
+            <div id="faultModal" class="modal hidden">
+                <div class="modal-content">
+                    <h3>设置故障类型</h3>
+                    <p class="modal-subtitle" id="faultModalSpaceId">车位 A1</p>
+                    <div class="fault-type-options">
+                        <label class="fault-type-option">
+                            <input type="radio" name="faultType" value="lift">
+                            <div class="fault-type-card" style="--fault-color: #eab308">
+                                <div class="fault-icon">⬆⬇</div>
+                                <div class="fault-name">升降故障</div>
+                                <div class="fault-desc">升降机故障，无法升降</div>
+                            </div>
+                        </label>
+                        <label class="fault-type-option">
+                            <input type="radio" name="faultType" value="traverse">
+                            <div class="fault-type-card" style="--fault-color: #f97316">
+                                <div class="fault-icon">⬅➡</div>
+                                <div class="fault-name">横移故障</div>
+                                <div class="fault-desc">横移机构故障，无法横移</div>
+                            </div>
+                        </label>
+                        <label class="fault-type-option">
+                            <input type="radio" name="faultType" value="lock">
+                            <div class="fault-type-card" style="--fault-color: #dc2626">
+                                <div class="fault-icon">🔒</div>
+                                <div class="fault-name">车位锁故障</div>
+                                <div class="fault-desc">车位锁故障，车辆无法取放</div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="modal-buttons">
+                        <button class="btn btn-secondary" id="cancelFaultBtn">取消</button>
+                        <button class="btn btn-primary" id="confirmFaultBtn">确认故障</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -42,6 +80,13 @@
                 <div class="button-group">
                     <button id="fetchBtn" class="btn btn-primary">取车</button>
                     <button id="searchBtn" class="btn btn-secondary">搜索</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>调度队列 <span class="section-badge" id="queueBadge">0</span></h2>
+                <div id="queueList" class="queue-list">
+                    <p class="placeholder">暂无待执行任务</p>
                 </div>
             </div>
 
@@ -64,7 +109,48 @@
             </div>
 
             <div class="panel-section">
-                <h2>存取记录</h2>
+                <h2>存取记录报表</h2>
+                <div class="filter-bar">
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label>车牌号</label>
+                            <input type="text" id="filterPlate" placeholder="输入车牌号" class="filter-input">
+                        </div>
+                        <div class="filter-item">
+                            <label>车位</label>
+                            <select id="filterSpace" class="filter-input">
+                                <option value="">全部</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label>类型</label>
+                            <select id="filterType" class="filter-input">
+                                <option value="">全部</option>
+                                <option value="park">存车</option>
+                                <option value="fetch">取车</option>
+                                <option value="fault_set">故障设置</option>
+                                <option value="fault_clear">故障解除</option>
+                            </select>
+                        </div>
+                        <div class="filter-item">
+                            <label>开始日期</label>
+                            <input type="date" id="filterStartDate" class="filter-input">
+                        </div>
+                    </div>
+                    <div class="filter-row">
+                        <div class="filter-item">
+                            <label>结束日期</label>
+                            <input type="date" id="filterEndDate" class="filter-input">
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button id="applyFilterBtn" class="btn btn-secondary btn-sm">筛选</button>
+                        <button id="resetFilterBtn" class="btn btn-secondary btn-sm">重置</button>
+                        <button id="exportBtn" class="btn btn-primary btn-sm">导出CSV</button>
+                    </div>
+                </div>
                 <div id="recordList" class="record-list">
                     <p class="placeholder">暂无存取记录</p>
                 </div>

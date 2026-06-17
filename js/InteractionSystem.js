@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { garageManager } from './GarageManager.js';
 
 class InteractionSystem {
     constructor(scene, camera, renderer, parkingService, modelBuilder) {
@@ -103,6 +104,11 @@ class InteractionSystem {
     onClick(event) {
         if (this.isDragging) return;
 
+        if (this.parkingService && this.parkingService.isSystemLocked) {
+            this.parkingService.showToast('系统正在执行任务，请稍候再操作', 'warning');
+            return;
+        }
+
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -143,6 +149,12 @@ class InteractionSystem {
     }
 
     onTouchEnd(event) {
+        if (this.parkingService && this.parkingService.isSystemLocked) {
+            this.parkingService.showToast('系统正在执行任务，请稍候再操作', 'warning');
+            this.mouseDownPos = { x: 0, y: 0 };
+            return;
+        }
+
         if (!this.isDragging && event.changedTouches.length === 1) {
             event.preventDefault();
             const touch = event.changedTouches[0];
@@ -166,6 +178,12 @@ class InteractionSystem {
     }
 
     checkHover() {
+        if (this.parkingService && this.parkingService.isSystemLocked) {
+            this.restoreHoveredSpace();
+            this.renderer.domElement.style.cursor = 'not-allowed';
+            return;
+        }
+
         const intersects = this.getIntersects();
         
         if (intersects.length > 0) {
@@ -193,25 +211,25 @@ class InteractionSystem {
     }
 
     highlightSpace(spaceId) {
-        const space = this.modelBuilder && this.modelBuilder.garageManager ? 
-            this.modelBuilder.garageManager.getSpace(spaceId) : null;
+        const space = garageManager.getSpace(spaceId);
         
-        if (space && space.mesh && !space.isFault) {
-            space.mesh.material.emissiveIntensity = 0.4;
+        if (space && space.mesh && !space.isFault && !space.isHighlighted) {
+            space.mesh.material.emissiveIntensity = 0.5;
         }
     }
 
     restoreHoveredSpace() {
         if (this.hoveredSpace) {
-            const space = this.modelBuilder && this.modelBuilder.garageManager ? 
-                this.modelBuilder.garageManager.getSpace(this.hoveredSpace) : null;
+            const space = garageManager.getSpace(this.hoveredSpace);
             
-            if (space && space.mesh && !space.isFault) {
+            if (space && space.mesh && !space.isFault && !space.isHighlighted) {
                 space.mesh.material.emissiveIntensity = 0.2;
             }
             this.hoveredSpace = null;
         }
-        this.renderer.domElement.style.cursor = 'grab';
+        if (!this.parkingService || !this.parkingService.isSystemLocked) {
+            this.renderer.domElement.style.cursor = 'grab';
+        }
     }
 
     onWindowResize() {

@@ -137,7 +137,27 @@ class App {
 
     setupEventBindings() {
         window.toggleFault = (spaceId) => {
-            this.parkingService.toggleFault(spaceId);
+            this.parkingService.openFaultModal(spaceId);
+        };
+
+        window.confirmFault = () => {
+            this.parkingService.confirmFault();
+        };
+
+        window.closeFaultModal = () => {
+            this.parkingService.closeFaultModal();
+        };
+
+        window.applyFilter = () => {
+            this.parkingService.applyFilter();
+        };
+
+        window.resetFilter = () => {
+            this.parkingService.resetFilter();
+        };
+
+        window.exportRecords = () => {
+            this.parkingService.exportRecords();
         };
 
         garageManager.onSpaceStatusChange = (space) => {
@@ -145,6 +165,15 @@ class App {
                 this.modelBuilder.updateSpaceColor(space);
             }
         };
+
+        const faultModal = document.getElementById('faultModal');
+        if (faultModal) {
+            faultModal.addEventListener('click', (e) => {
+                if (e.target.id === 'faultModal') {
+                    this.parkingService.closeFaultModal();
+                }
+            });
+        }
 
         window.addEventListener('beforeunload', () => {
             this.cleanup();
@@ -154,9 +183,13 @@ class App {
     async initializeData() {
         garageManager.updateStatsUI();
         garageManager.updateSpaceListUI();
+        garageManager.initSpaceFilterOptions();
         recordManager.updateUI();
+        this.parkingService.updateQueueUI();
 
         await this.parkingService.initializeDemoVehicles();
+
+        garageManager.initSpaceFilterOptions();
     }
 
     animate() {
