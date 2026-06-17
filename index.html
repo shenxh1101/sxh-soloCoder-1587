@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D自动化立体车库模拟系统</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body>
+    <div class="app-container">
+        <div class="scene-container" id="sceneContainer">
+            <div class="scene-header">
+                <h1>3D自动化立体车库模拟系统</h1>
+                <div class="scene-info">
+                    <span class="info-item">总车位: <strong id="totalSpaces">15</strong></span>
+                    <span class="info-item">已占用: <strong id="occupiedSpaces">0</strong></span>
+                    <span class="info-item">空闲: <strong id="freeSpaces">15</strong></span>
+                    <span class="info-item">故障: <strong id="faultSpaces">0</strong></span>
+                </div>
+            </div>
+            <canvas id="threeCanvas"></canvas>
+            <div class="instruction">
+                <span>💡 点击绿色空车位可存车 | 鼠标拖拽旋转 | 滚轮缩放</span>
+            </div>
+        </div>
+
+        <div class="control-panel">
+            <div class="panel-section">
+                <h2>车辆存取</h2>
+                <div class="input-group">
+                    <label for="plateInput">车牌号</label>
+                    <input type="text" id="plateInput" placeholder="请输入车牌号" maxlength="10">
+                </div>
+                <div class="button-group">
+                    <button id="fetchBtn" class="btn btn-primary">取车</button>
+                    <button id="searchBtn" class="btn btn-secondary">搜索</button>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>搜索结果</h2>
+                <div id="searchResult" class="search-result">
+                    <p class="placeholder">请输入车牌号进行搜索</p>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>车位状态</h2>
+                <div class="legend">
+                    <span class="legend-item"><span class="status-dot free"></span>空闲</span>
+                    <span class="legend-item"><span class="status-dot occupied"></span>占用</span>
+                    <span class="legend-item"><span class="status-dot fault"></span>故障</span>
+                </div>
+                <div id="spaceList" class="space-list">
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h2>存取记录</h2>
+                <div id="recordList" class="record-list">
+                    <p class="placeholder">暂无存取记录</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script type="module" src="js/config.js"></script>
+    <script type="module" src="js/RecordManager.js"></script>
+    <script type="module" src="js/GarageManager.js"></script>
+    <script type="module" src="js/ModelBuilder.js"></script>
+    <script type="module" src="js/AnimationController.js"></script>
+    <script type="module" src="js/ParkingService.js"></script>
+    <script type="module" src="js/InteractionSystem.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
